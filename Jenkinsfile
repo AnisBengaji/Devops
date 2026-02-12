@@ -1,33 +1,25 @@
 pipeline {
 
- agent any
+    agent any
 
- tools {jdk 'JAVA_HOME’, maven 'M2_HOME'}
+    tools {
+        jdk 'JAVA_HOME'
+        maven 'M2_HOME'
+    }
 
- stages {
+    stages {
 
- stage('GIT') {
+        stage('Compile') {
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
 
-           steps {
+        stage('Test') {
+            steps {
+                sh 'mvn test'
+            }
+        }
 
-               git branch: 'master',
-
-               url: ' https://github.com/AnisBengaji/Devops'
-
-          }
-
-     }
-
- stage ('Compile Stage') {
-
- steps {
-
- sh 'mvn clean compile'
-
- }
-
- }
-
- }
-
+    }
 }
