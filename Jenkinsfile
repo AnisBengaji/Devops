@@ -15,5 +15,13 @@ pipeline {
             }
         }
 
+        stage('MVN SONARQUBE') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh 'mvn clean verify sonar:sonar'
+                }
+            }
+        }
+
     }
 }
