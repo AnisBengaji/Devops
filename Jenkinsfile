@@ -47,5 +47,13 @@ pipeline {
         '''
     }
 }
+	stage('Deploy to Kubernetes') {
+            steps {
+                sh '''
+                    kubectl apply -f mysql-deployment.yaml -n devops
+                    kubectl apply -f spring-deployment.yaml -n devops
+                '''
+            }
+        }
     }
 }
