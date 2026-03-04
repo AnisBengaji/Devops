@@ -17,14 +17,25 @@ pipeline {
         }
     }
 }
-        stage('Build Docker Image') {
+       stage('Build Docker Image') {
             steps {
-                sh 'docker build -t student-management:latest .'
+                sh 'docker build -t anisbengaji/student-management:latest .'
             }
         }
         stage('Pull MySQL Image') {
             steps {
                 sh 'docker pull mysql:8.0'
+            }
+        }
+        
+         stage('Push to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    sh '''
+                        docker login -u $USERNAME -p $PASSWORD
+                        docker push anisbengaji/student-management:latest
+                    '''
+                }
             }
         }
         stage('Run Containers') {

@@ -12,7 +12,7 @@ services:
       - app-network
 
   spring-app:
-    build: .
+    image: anisbengaji/student-management:latest
     container_name: student-management
     depends_on:
       - mysql
