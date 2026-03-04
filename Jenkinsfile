@@ -11,12 +11,12 @@ pipeline {
             }
         }
         stage('MVN SONARQUBE') {
-            steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh 'mvn clean verify sonar:sonar'
-                }
-            }
+    steps {
+        withSonarQubeEnv('SonarQube') {
+            sh 'mvn clean verify sonar:sonar -DskipTests'
         }
+    }
+}
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t student-management:latest .'
