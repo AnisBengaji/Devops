@@ -38,12 +38,12 @@ pipeline {
                 }
             }
         }
-        stage('Run Containers') {
+       stage('Run Containers') {
     steps {
         sh '''
             docker rm -f mysql-db student-management || true
-            docker-compose down || true
-            docker-compose up -d
+            docker compose down || true
+            docker compose up -d
         '''
     }
 }
