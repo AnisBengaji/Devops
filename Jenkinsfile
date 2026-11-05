@@ -13,7 +13,7 @@ pipeline {
         stage('MVN SONARQUBE') {
     steps {
         withSonarQubeEnv('SonarQube') {
-            sh 'mvn clean verify sonar:sonar -DskipTests'
+            sh 'mvn clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -DskipTests'
         }
     }
 }
