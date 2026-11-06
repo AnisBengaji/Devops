@@ -78,19 +78,20 @@ pipeline {
         }
 
         stage('IaC Scan - Checkov') {
-            steps {
-                sh '''
-                    docker run --rm -v "$WORKSPACE:/repo" bridgecrew/checkov:latest \
-                      -d /repo --framework dockerfile kubernetes \
-                      --compact -o cli -o json --output-file-path console,/repo/checkov-report || true
-                '''
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'checkov-report/results_json.json', allowEmptyArchive: true
-                }
-            }
+   	 steps {
+        sh '''
+            mkdir -p "$WORKSPACE/checkov-report"
+            docker run --rm -v "$WORKSPACE:/repo" bridgecrew/checkov:latest \
+              -d /repo --framework dockerfile kubernetes \
+              --compact -o cli -o json --output-file-path console,/repo/checkov-report || true
+        '''
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: 'checkov-report/results_json.json', allowEmptyArchive: true
         }
+    }
+}
 
         stage('Pull MySQL Image') {
             steps {
@@ -141,28 +142,30 @@ pipeline {
         }
 
         stage('Upload to DefectDojo') {
-            steps {
-                withCredentials([string(credentialsId: 'defectdojo-api-key', variable: 'DD_TOKEN')]) {
-                    sh '''
-                        URL="$DD_URL/api/v2/reimport-scan/"
-                        push() {  # $1=scan_type  $2=file  $3=test_title
-                          echo "--> $3"
-                          [ -f "$2" ] || { echo "   (fichier absent: $2)"; return; }
-                          curl -s -o /dev/null -w "   HTTP %{http_code}\\n" -X POST "$URL" \
-                            -H "Authorization: Token $DD_TOKEN" \
-                            -F "scan_type=$1" -F "engagement=$DD_ENGAGEMENT" -F "file=@$2" \
-                            -F "test_title=$3" -F "active=true" -F "verified=false" \
-                            -F "close_old_findings=true"
-                        }
-                        push "Gitleaks Scan"  "$WORKSPACE/gitleaks-report.json"            "Gitleaks"
-                        push "Anchore Grype"  "$WORKSPACE/grype-report.json"               "Grype - Dependencies"
-                        push "Trivy Scan"     "$WORKSPACE/trivy-image-report.json"         "Trivy - Image"
-                        push "ZAP Scan"       "$WORKSPACE/zap-out/zap-report.xml"          "OWASP ZAP"
-                        push "Checkov Scan"   "$WORKSPACE/checkov-report/results_json.json" "Checkov"
-                    '''
+    steps {
+        withCredentials([string(credentialsId: 'defectdojo-api-key', variable: 'DD_TOKEN')]) {
+            sh '''
+                URL="$DD_URL/api/v2/import-scan/"
+                push() {  # $1=scan_type  $2=file  $3=test_title
+                  echo "--> $3"
+                  [ -f "$2" ] || { echo "   (fichier absent: $2)"; return; }
+                  code=$(curl -s -o /tmp/dd_resp.json -w "%{http_code}" -X POST "$URL" \
+                    -H "Authorization: Token $DD_TOKEN" \
+                    -F "scan_type=$1" -F "engagement=$DD_ENGAGEMENT" -F "file=@$2" \
+                    -F "test_title=$3" -F "active=true" -F "verified=false" \
+                    -F "close_old_findings=true")
+                  echo "   HTTP $code"
+                  [ "$code" = "201" ] || cat /tmp/dd_resp.json
                 }
-            }
+                push "Gitleaks Scan"  "$WORKSPACE/gitleaks-report.json"             "Gitleaks"
+                push "Anchore Grype"  "$WORKSPACE/grype-report.json"                "Grype - Dependencies"
+                push "Trivy Scan"     "$WORKSPACE/trivy-image-report.json"          "Trivy - Image"
+                push "ZAP Scan"       "$WORKSPACE/zap-out/zap-report.xml"           "OWASP ZAP"
+                push "Checkov Scan"   "$WORKSPACE/checkov-report/results_json.json" "Checkov"
+            '''
         }
+    }
+}
 
         stage('Security Gate - DefectDojo') {
             steps {
