@@ -4,61 +4,64 @@ pipeline {
         jdk 'JAVA_HOME'
         maven 'M2_HOME'
     }
-    
-    stage('Secrets Scan - Gitleaks') {
-    steps {
-        sh '''
-            docker run --rm -v "$WORKSPACE:/repo" zricethezav/gitleaks:latest \
-              detect --source /repo \
-              --report-format json --report-path /repo/gitleaks-report.json -v
-        '''
-    }
-    post {
-        always {
-            archiveArtifacts artifacts: 'gitleaks-report.json', allowEmptyArchive: true
-        }
-    }
-}
     stages {
+        stage('Secrets Scan - Gitleaks') {
+            steps {
+                sh '''
+                    docker run --rm -v "$WORKSPACE:/repo" zricethezav/gitleaks:latest \
+                      detect --source /repo \
+                      --report-format json --report-path /repo/gitleaks-report.json -v
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'gitleaks-report.json', allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Compile') {
             steps {
                 sh 'mvn clean compile'
             }
         }
-        
+
         stage('SCA - Trivy (dependencies)') {
-    steps {
-        sh '''
-            docker run --rm -v "$WORKSPACE:/repo" aquasec/trivy:latest \
-              fs --scanners vuln --severity CRITICAL,HIGH \
-              --format json -o /repo/trivy-fs-report.json /repo
-        '''
-    }
-    post {
-        always {
-            archiveArtifacts artifacts: 'trivy-fs-report.json', allowEmptyArchive: true
+            steps {
+                sh '''
+                    docker run --rm -v "$WORKSPACE:/repo" aquasec/trivy:latest \
+                      fs --scanners vuln --severity CRITICAL,HIGH \
+                      --format json -o /repo/trivy-fs-report.json /repo
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-fs-report.json', allowEmptyArchive: true
+                }
+            }
         }
-    }
-}
+
         stage('MVN SONARQUBE') {
-    steps {
-        withSonarQubeEnv('SonarQube') {
-            sh 'mvn clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -DskipTests'
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh 'mvn clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -DskipTests'
+                }
+            }
         }
-    }
-}
-       stage('Build Docker Image') {
+
+        stage('Build Docker Image') {
             steps {
                 sh 'docker build -t anisbengaji/student-management:latest .'
             }
         }
+
         stage('Pull MySQL Image') {
             steps {
                 sh 'docker pull mysql:8.0'
             }
         }
-        
-         stage('Push to DockerHub') {
+
+        stage('Push to DockerHub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                     sh '''
@@ -68,16 +71,18 @@ pipeline {
                 }
             }
         }
-       stage('Run Containers') {
-    steps {
-        sh '''
-            docker rm -f mysql-db student-management || true
-            docker compose down || true
-            docker compose up -d
-        '''
-    }
-}
-	stage('Deploy to Kubernetes') {
+
+        stage('Run Containers') {
+            steps {
+                sh '''
+                    docker rm -f mysql-db student-management || true
+                    docker compose down || true
+                    docker compose up -d
+                '''
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
             steps {
                 sh '''
                     kubectl apply -f mysql-deployment.yaml -n devops
