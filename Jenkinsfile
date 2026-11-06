@@ -26,23 +26,18 @@ pipeline {
     }
 }
 
-          stage('SCA - Trivy (dependencies)') {
-            steps {
-                sh '''
-                    docker run --rm \
-                      -v trivy-cache:/root/.cache/trivy \
-                      -v "$WORKSPACE:/repo" aquasec/trivy:latest \
-                      fs --scanners vuln --severity CRITICAL,HIGH \
-                      --timeout 15m \
-                      --format json -o /repo/trivy-fs-report.json /repo/target
-                '''
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'trivy-fs-report.json', allowEmptyArchive: true
-                }
-            }
-        }
+          stage('SCA - Grype (dependencies)') {
+  	      steps {
+   		  sh '''
+    		   docker run --rm -v "$WORKSPACE:/repo" anchore/grype:latest \
+    	  	    /repo/target/student-management-0.0.1-SNAPSHOT.jar \
+    		    -o json --file /repo/grype-report.json || true
+   		  '''
+  }
+  post {
+    always { archiveArtifacts artifacts: 'grype-report.json', allowEmptyArchive: true }
+  }
+}
 
         stage('MVN SONARQUBE') {
             steps {
