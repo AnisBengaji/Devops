@@ -78,8 +78,9 @@ pipeline {
         }
 
         stage('IaC Scan - Checkov') {
-   	 steps {
+    steps {
         sh '''
+            rm -rf "$WORKSPACE/checkov-report"
             mkdir -p "$WORKSPACE/checkov-report"
             docker run --rm -v "$WORKSPACE:/repo" bridgecrew/checkov:latest \
               -d /repo --framework dockerfile kubernetes \
