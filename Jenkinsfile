@@ -25,6 +25,21 @@ pipeline {
                 sh 'mvn clean compile'
             }
         }
+        
+        stage('SCA - Trivy (dependencies)') {
+    steps {
+        sh '''
+            docker run --rm -v "$WORKSPACE:/repo" aquasec/trivy:latest \
+              fs --scanners vuln --severity CRITICAL,HIGH \
+              --format json -o /repo/trivy-fs-report.json /repo
+        '''
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: 'trivy-fs-report.json', allowEmptyArchive: true
+        }
+    }
+}
         stage('MVN SONARQUBE') {
     steps {
         withSonarQubeEnv('SonarQube') {
