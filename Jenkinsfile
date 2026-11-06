@@ -20,26 +20,26 @@ pipeline {
             }
         }
 
-        stage('Compile') {
-            steps {
-                sh 'mvn clean compile'
-            }
-        }
+        stage('Build & Package') {
+    steps {
+        sh 'mvn clean package -DskipTests'
+    }
+}
 
         stage('SCA - Trivy (dependencies)') {
-            steps {
-                sh '''
-                    docker run --rm -v "$WORKSPACE:/repo" aquasec/trivy:latest \
-                      fs --scanners vuln --severity CRITICAL,HIGH \
-                      --format json -o /repo/trivy-fs-report.json /repo
-                '''
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'trivy-fs-report.json', allowEmptyArchive: true
-                }
-            }
+    steps {
+        sh '''
+            docker run --rm -v "$WORKSPACE:/repo" aquasec/trivy:latest \
+              fs --scanners vuln --severity CRITICAL,HIGH \
+              --format json -o /repo/trivy-fs-report.json /repo/target
+        '''
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: 'trivy-fs-report.json', allowEmptyArchive: true
         }
+    }
+}
 
         stage('MVN SONARQUBE') {
             steps {
