@@ -77,6 +77,21 @@ pipeline {
                 }
             }
         }
+        
+        stage('IaC Scan - Checkov') {
+  	    steps {
+    		sh '''
+     		 docker run --rm -v "$WORKSPACE:/repo" bridgecrew/checkov:latest \
+       		 -d /repo --framework dockerfile kubernetes \
+       		 --compact -o cli -o json --output-file-path console,/repo || true
+   		 '''
+  }
+  post {
+    always {
+      archiveArtifacts artifacts: 'results_json.json', allowEmptyArchive: true
+    }
+  }
+}
 
         stage('Pull MySQL Image') {
             steps {
