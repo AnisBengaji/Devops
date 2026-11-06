@@ -26,20 +26,23 @@ pipeline {
     }
 }
 
-        stage('SCA - Trivy (dependencies)') {
-    steps {
-        sh '''
-            docker run --rm -v "$WORKSPACE:/repo" aquasec/trivy:latest \
-              fs --scanners vuln --severity CRITICAL,HIGH \
-              --format json -o /repo/trivy-fs-report.json /repo/target
-        '''
-    }
-    post {
-        always {
-            archiveArtifacts artifacts: 'trivy-fs-report.json', allowEmptyArchive: true
+          stage('SCA - Trivy (dependencies)') {
+            steps {
+                sh '''
+                    docker run --rm \
+                      -v trivy-cache:/root/.cache/trivy \
+                      -v "$WORKSPACE:/repo" aquasec/trivy:latest \
+                      fs --scanners vuln --severity CRITICAL,HIGH \
+                      --timeout 15m \
+                      --format json -o /repo/trivy-fs-report.json /repo/target
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-fs-report.json', allowEmptyArchive: true
+                }
+            }
         }
-    }
-}
 
         stage('MVN SONARQUBE') {
             steps {
@@ -99,6 +102,26 @@ pipeline {
                     docker compose down || true
                     docker compose up -d
                 '''
+            }
+        }
+        
+        
+           stage('DAST - OWASP ZAP') {
+               steps {
+                   sh '''
+                        echo "Waiting for the app to be ready..."
+                    	sleep 40
+                    	docker run --rm --network host \
+                      	-v "$WORKSPACE:/zap/wrk:rw" \
+                      	ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+                      	-t http://localhost:8089 \
+                      	-J zap-report.json -r zap-report.html || true
+                   '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'zap-report.*', allowEmptyArchive: true
+                }
             }
         }
 
