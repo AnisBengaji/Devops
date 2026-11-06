@@ -77,21 +77,23 @@ pipeline {
                 }
             }
         }
-        
         stage('IaC Scan - Checkov') {
   	    steps {
-    		sh '''
-     		 docker run --rm -v "$WORKSPACE:/repo" bridgecrew/checkov:latest \
-       		 -d /repo --framework dockerfile kubernetes \
-       		 --compact -o cli -o json --output-file-path console,/repo || true
-   		 '''
+   	        sh '''
+      		docker run --rm -v "$WORKSPACE:/repo" bridgecrew/checkov:latest \
+        	-d /repo --framework dockerfile kubernetes \
+       	        --compact -o cli -o json --output-file-path console,/repo/checkov-report || true
+    		'''
   }
   post {
     always {
-      archiveArtifacts artifacts: 'results_json.json', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'checkov-report/results_json.json', allowEmptyArchive: true
     }
   }
 }
+       
+        
+        
 
         stage('Pull MySQL Image') {
             steps {
