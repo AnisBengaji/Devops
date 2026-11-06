@@ -106,14 +106,15 @@ pipeline {
         }
         
         
-        stage('DAST - OWASP ZAP') {
-            steps {
-                sh '''
+           stage('DAST - OWASP ZAP') {
+               steps {
+                  sh '''
                     echo "Waiting for the app to be ready..."
                     sleep 40
-                    chmod -R 777 "$WORKSPACE"
+                    mkdir -p "$WORKSPACE/zap-out"
+                    chmod 777 "$WORKSPACE/zap-out"
                     docker run --rm --network host \
-                      -v "$WORKSPACE:/zap/wrk:rw" \
+                      -v "$WORKSPACE/zap-out:/zap/wrk:rw" \
                       ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
                       -t http://localhost:8089 \
                       -J zap-report.json -r zap-report.html || true
@@ -121,7 +122,7 @@ pipeline {
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'zap-report.*', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'zap-out/zap-report.*', allowEmptyArchive: true
                 }
             }
         }
