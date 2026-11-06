@@ -54,6 +54,24 @@ pipeline {
                 sh 'docker build -t anisbengaji/student-management:latest .'
             }
         }
+        
+                stage('Image Scan - Trivy') {
+            steps {
+                sh '''
+                    docker run --rm \
+                      -v /var/run/docker.sock:/var/run/docker.sock \
+                      -v "$WORKSPACE:/repo" aquasec/trivy:latest \
+                      image --severity CRITICAL,HIGH \
+                      --format json -o /repo/trivy-image-report.json \
+                      anisbengaji/student-management:latest
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-image-report.json', allowEmptyArchive: true
+                }
+            }
+        }
 
         stage('Pull MySQL Image') {
             steps {
