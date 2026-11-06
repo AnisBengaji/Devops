@@ -76,23 +76,23 @@ pipeline {
                 }
             }
         }
-
         stage('IaC Scan - Checkov') {
     steps {
         sh '''
-            rm -rf "$WORKSPACE/checkov-report"
-            mkdir -p "$WORKSPACE/checkov-report"
             docker run --rm -v "$WORKSPACE:/repo" bridgecrew/checkov:latest \
-              -d /repo --framework dockerfile kubernetes \
-              --compact -o cli -o json --output-file-path console,/repo/checkov-report || true
+              -d /repo --framework dockerfile kubernetes --compact -o cli || true
+            docker run --rm -v "$WORKSPACE:/repo" bridgecrew/checkov:latest \
+              -d /repo --framework dockerfile kubernetes -o json > "$WORKSPACE/checkov-results.json" 2>/dev/null || true
         '''
     }
     post {
         always {
-            archiveArtifacts artifacts: 'checkov-report/results_json.json', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'checkov-results.json', allowEmptyArchive: true
         }
     }
 }
+
+      
 
         stage('Pull MySQL Image') {
             steps {
@@ -162,7 +162,7 @@ pipeline {
                 push "Anchore Grype"  "$WORKSPACE/grype-report.json"                "Grype - Dependencies"
                 push "Trivy Scan"     "$WORKSPACE/trivy-image-report.json"          "Trivy - Image"
                 push "ZAP Scan"       "$WORKSPACE/zap-out/zap-report.xml"           "OWASP ZAP"
-                push "Checkov Scan"   "$WORKSPACE/checkov-report/results_json.json" "Checkov"
+                push "Checkov Scan"   "$WORKSPACE/checkov-results.json"  "Checkov"
             '''
         }
     }
