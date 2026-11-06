@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   mysql:
     image: mysql:8.0
@@ -10,12 +9,18 @@ services:
       - "3306:3306"
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -psecret || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   spring-app:
     image: anisbengaji/student-management:latest
     container_name: student-management
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/studentdb?createDatabaseIfNotExist=true
       SPRING_DATASOURCE_USERNAME: root

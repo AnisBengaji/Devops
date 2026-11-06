@@ -4,6 +4,21 @@ pipeline {
         jdk 'JAVA_HOME'
         maven 'M2_HOME'
     }
+    
+    stage('Secrets Scan - Gitleaks') {
+    steps {
+        sh '''
+            docker run --rm -v "$WORKSPACE:/repo" zricethezav/gitleaks:latest \
+              detect --source /repo \
+              --report-format json --report-path /repo/gitleaks-report.json -v
+        '''
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: 'gitleaks-report.json', allowEmptyArchive: true
+        }
+    }
+}
     stages {
         stage('Compile') {
             steps {
