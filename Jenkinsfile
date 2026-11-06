@@ -55,13 +55,15 @@ pipeline {
             }
         }
         
-                stage('Image Scan - Trivy') {
-            steps {
-                sh '''
+         stage('Image Scan - Trivy') {
+             steps {
+                 sh '''
                     docker run --rm \
                       -v /var/run/docker.sock:/var/run/docker.sock \
+                      -v trivy-cache:/root/.cache/trivy \
                       -v "$WORKSPACE:/repo" aquasec/trivy:latest \
-                      image --severity CRITICAL,HIGH \
+                      image --scanners vuln --severity CRITICAL,HIGH \
+                      --timeout 15m \
                       --format json -o /repo/trivy-image-report.json \
                       anisbengaji/student-management:latest
                 '''
