@@ -106,17 +106,18 @@ pipeline {
         }
         
         
-           stage('DAST - OWASP ZAP') {
-               steps {
-                   sh '''
-                        echo "Waiting for the app to be ready..."
-                    	sleep 40
-                    	docker run --rm --network host \
-                      	-v "$WORKSPACE:/zap/wrk:rw" \
-                      	ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-                      	-t http://localhost:8089 \
-                      	-J zap-report.json -r zap-report.html || true
-                   '''
+        stage('DAST - OWASP ZAP') {
+            steps {
+                sh '''
+                    echo "Waiting for the app to be ready..."
+                    sleep 40
+                    chmod -R 777 "$WORKSPACE"
+                    docker run --rm --network host \
+                      -v "$WORKSPACE:/zap/wrk:rw" \
+                      ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+                      -t http://localhost:8089 \
+                      -J zap-report.json -r zap-report.html || true
+                '''
             }
             post {
                 always {
