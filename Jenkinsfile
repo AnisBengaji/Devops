@@ -206,4 +206,24 @@ pipeline {
             }
         }
     }
+        post {
+        failure {
+            withCredentials([string(credentialsId: 'slack-webhook', variable: 'HOOK')]) {
+                sh '''
+                    curl -s -X POST -H 'Content-type: application/json' \
+                      --data "{\\"text\\":\\":red_circle: Pipeline ${JOB_NAME} #${BUILD_NUMBER} BLOQUE par le Security Gate (vulnerabilites critiques/hautes). ${BUILD_URL}\\"}" \
+                      "$HOOK"
+                '''
+            }
+        }
+        success {
+            withCredentials([string(credentialsId: 'slack-webhook', variable: 'HOOK')]) {
+                sh '''
+                    curl -s -X POST -H 'Content-type: application/json' \
+                      --data "{\\"text\\":\\":white_check_mark: Pipeline ${JOB_NAME} #${BUILD_NUMBER} reussi - deploiement autorise. ${BUILD_URL}\\"}" \
+                      "$HOOK"
+                '''
+            }
+        }
+    }
 }
