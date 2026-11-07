@@ -76,13 +76,13 @@ pipeline {
                 }
             }
         }
-        stage('IaC Scan - Checkov') {
+         stage('IaC Scan - Checkov') {
     steps {
         sh '''
             docker run --rm -v "$WORKSPACE:/repo" bridgecrew/checkov:latest \
-              -d /repo --framework dockerfile kubernetes --compact -o cli || true
+              -d /repo --framework dockerfile kubernetes secrets --compact -o cli || true
             docker run --rm -v "$WORKSPACE:/repo" bridgecrew/checkov:latest \
-              -d /repo --framework dockerfile kubernetes -o json > "$WORKSPACE/checkov-results.json" 2>/dev/null || true
+              -d /repo --framework dockerfile kubernetes secrets -o json > "$WORKSPACE/checkov-results.json" 2>/dev/null || true
         '''
     }
     post {
