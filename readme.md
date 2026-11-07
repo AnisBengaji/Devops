@@ -36,3 +36,55 @@ The old pipeline worked, but it was blind to security: no secret scanning, no de
 ---
 
 ## Pipeline
+
+```
+Checkout → Gitleaks → Build (Maven) → Grype (SCA) → SonarQube (SAST)
+→ Build Image → Trivy (Image) → Checkov (IaC) → Push DockerHub
+→ Run Containers → OWASP ZAP (DAST) → Upload to DefectDojo
+→ Security Gate → Deploy to Kubernetes
+```
+
+Each push triggers Jenkins to run the whole thing automatically. Every scanner sends its report to DefectDojo, and the **Security Gate** asks DefectDojo one question: *are there any active Critical/High vulnerabilities (CVSS ≥ 7)?* If yes, the build fails and the deploy is refused. A Slack notification is sent on every run.
+
+---
+
+## Shift-left (before the pipeline even runs)
+
+Security also runs on the developer's machine, so problems are caught before a commit is even pushed:
+
+- **SonarLint** in the IDE, connected to the SonarQube server (same rules as the pipeline)
+- **pre-commit hooks** running **Gitleaks** + **Semgrep** — a commit containing a secret is blocked locally
+
+---
+
+## Running locally with Docker
+
+```bash
+docker-compose up -d
+```
+
+> The MySQL password is no longer hardcoded in `docker-compose.yml`. It's read from a git-ignored `.env` file (and injected from a Jenkins credential in the pipeline), so no secret lives in the repo.
+
+---
+
+## Kubernetes
+
+```bash
+kubectl apply -f mysql-deployment.yaml -n devops
+kubectl apply -f spring-deployment.yaml -n devops
+kubectl get pods -n devops
+minikube service spring-service -n devops --url
+```
+
+---
+
+## Handling vulnerabilities
+
+The pipeline doesn't chase "zero vulnerabilities" (which isn't realistic). It follows a risk-based approach:
+
+- **Fix what's fixable** — e.g. bumping Spring Boot and pinning a newer Tomcat cleared most of the Critical/High CVEs.
+- **Risk-accept the rest** — vulnerabilities with no upstream fix are formally accepted in DefectDojo, with a justification and an expiry date. They stay documented, never silently ignored.
+
+---
+
+Made by **Anis Bengaji** — ESPRIT
