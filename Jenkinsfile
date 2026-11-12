@@ -1,5 +1,10 @@
 pipeline {
     agent any
+    
+     triggers {
+        pollSCM('H/2 * * * *')
+    }
+    
     tools {
         jdk 'JAVA_HOME'
         maven 'M2_HOME'
@@ -9,6 +14,8 @@ pipeline {
         DD_ENGAGEMENT = '1'
     }
     stages {
+        // Scan de secrets : Gitleaks cherche mots de passe, cles API et tokens dans le code
+        // et l'historique Git. Non bloquant ici (|| true), la decision est prise par la Security Gate.
         stage('Secrets Scan - Gitleaks') {
             steps {
                 sh '''
@@ -24,12 +31,15 @@ pipeline {
             }
         }
 
+        // Compilation Maven : produit le JAR Spring Boot, necessaire a l'analyse SCA qui suit.
         stage('Build & Package') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
 
+        // SCA : Grype analyse les dependances embarquees dans le JAR (Tomcat, Jackson, Spring...)
+        // et signale les CVE connues. Remplace Trivy, qui ne lisait pas le fat jar.
         stage('SCA - Grype (dependencies)') {
             steps {
                 sh '''
@@ -43,6 +53,8 @@ pipeline {
             }
         }
 
+        // SAST : SonarQube analyse le code source Java (failles, bugs, qualite).
+        // Les resultats sont consultables dans l'interface SonarQube.
         stage('MVN SONARQUBE') {
             steps {
                 withSonarQubeEnv('SonarQube') {
@@ -51,12 +63,15 @@ pipeline {
             }
         }
 
+        // Construction de l'image Docker a partir du Dockerfile durci (non-root, HEALTHCHECK).
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t anisbengaji/student-management:latest .'
             }
         }
 
+        // Scan d'image : Trivy cherche les CVE Critical/High dans l'image et son OS de base.
+        // Le volume trivy-cache evite de retelecharger la base de vulnerabilites a chaque build.
         stage('Image Scan - Trivy') {
             steps {
                 sh '''
@@ -76,6 +91,9 @@ pipeline {
                 }
             }
         }
+
+        // Scan IaC : Checkov verifie les mauvaises configurations du Dockerfile et des manifests
+        // Kubernetes. Premier appel pour l'affichage dans les logs, second pour l'export JSON.
          stage('IaC Scan - Checkov') {
     steps {
         sh '''
@@ -94,6 +112,7 @@ pipeline {
 
       
 
+        // Recupere l'image MySQL utilisee par docker compose.
         stage('Pull MySQL Image') {
             steps {
                 sh 'docker pull mysql:8.0'
@@ -102,6 +121,8 @@ pipeline {
 
    
 
+        // Demarre l'application et sa base MySQL (docker compose) pour pouvoir la tester dynamiquement.
+        // Les anciens conteneurs sont supprimes avant.
         stage('Run Containers') {
             steps {
                 sh '''
@@ -112,6 +133,8 @@ pipeline {
             }
         }
 
+        // DAST : OWASP ZAP teste l'application en cours d'execution (scan baseline : en-tetes,
+        // cookies, etc.). Le sleep laisse le temps a l'application de demarrer.
         stage('DAST - OWASP ZAP') {
             steps {
                 sh '''
@@ -133,6 +156,8 @@ pipeline {
             }
         }
 
+        // Centralisation : envoie chaque rapport de scan a DefectDojo via son API (un appel par outil).
+        // La cle API est un credential Jenkins masque.
         stage('Upload to DefectDojo') {
     steps {
         withCredentials([string(credentialsId: 'defectdojo-api-key', variable: 'DD_TOKEN')]) {
@@ -159,6 +184,9 @@ pipeline {
     }
 }
 
+        // Quality gate : interroge DefectDojo pour compter les findings actifs Critical et High.
+        // S'il en reste au moins un (CVSS >= 7), le pipeline est bloque (exit 1) et rien n'est deploye.
+        // Les vulnerabilites acceptees via Risk Acceptance sont inactives et ne sont pas comptees.
         stage('Security Gate - DefectDojo') {
             steps {
                 withCredentials([string(credentialsId: 'defectdojo-api-key', variable: 'DD_TOKEN')]) {
@@ -188,6 +216,7 @@ pipeline {
             }
         }
         
+         // Publication de l'image sur DockerHub, uniquement si la Security Gate est passee.
          stage('Push to DockerHub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
@@ -199,6 +228,8 @@ pipeline {
             }
         }
 
+        // Deploiement sur Kubernetes (namespace devops) : MySQL puis l'application.
+        // Dernier stage, atteint seulement si tous les controles precedents sont passes.
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
