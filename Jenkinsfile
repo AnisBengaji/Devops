@@ -100,16 +100,7 @@ pipeline {
             }
         }
 
-        stage('Push to DockerHub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                    sh '''
-                        docker login -u $USERNAME -p $PASSWORD
-                        docker push anisbengaji/student-management:latest
-                    '''
-                }
-            }
-        }
+   
 
         stage('Run Containers') {
             steps {
@@ -192,6 +183,17 @@ pipeline {
                           exit 1
                         fi
                         echo " GATE: PASSE"
+                    '''
+                }
+            }
+        }
+        
+         stage('Push to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    sh '''
+                        docker login -u $USERNAME -p $PASSWORD
+                        docker push anisbengaji/student-management:latest
                     '''
                 }
             }
