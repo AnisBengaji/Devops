@@ -1,14 +1,25 @@
-package tn.esprit.studentmanagement.dto;
+package tn.esprit.studentmanagement.entities;
 
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
 
+import java.util.List;
+
+@Entity
 @Getter
 @Setter
-public class DepartmentDTO {
-    private Long idDepartment;   // used by update, null on create
+@AllArgsConstructor
+@NoArgsConstructor
+@ToString
+public class Department {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long idDepartment;
     private String name;
     private String location;
     private String phone;
-    private String head;
+    private String head; // chef de département
+
+    @OneToMany(mappedBy = "department")
+    private List<Student> students;
 }
