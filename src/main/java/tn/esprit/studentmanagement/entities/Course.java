@@ -22,6 +22,6 @@ public class Course {
 
     @OneToMany(mappedBy = "course")
     private List<Enrollment> enrollments;
-    private String awsKey = "AKIAJ5K7M2QPXW3ZT6RD";
+    
 
 }
