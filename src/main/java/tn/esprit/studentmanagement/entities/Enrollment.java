@@ -22,6 +22,7 @@ public class Enrollment {
 
     @ManyToOne
     private Student student;
+    
 
     @ManyToOne
     private Course course;
