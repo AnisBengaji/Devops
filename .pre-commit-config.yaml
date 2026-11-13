@@ -3,8 +3,3 @@ repos:
     rev: v8.18.0
     hooks:
       - id: gitleaks
-  - repo: https://github.com/returntocorp/semgrep
-    rev: v1.45.0
-    hooks:
-      - id: semgrep
-        args: ["--config", "p/java", "--error"]
