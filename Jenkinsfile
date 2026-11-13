@@ -230,6 +230,7 @@ pipeline {
 
         // Deploiement sur Kubernetes (namespace devops) : MySQL puis l'application.
         // Dernier stage, atteint seulement si tous les controles precedents sont passes.
+        //al
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
