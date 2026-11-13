@@ -30,6 +30,6 @@ public class EnrollmentController {
     @DeleteMapping("/deleteEnrollment/{id}")
     public void deleteEnrollment(@PathVariable Long id) {
         enrollmentService.deleteEnrollment(id); }
-        aws-token-access = "129274";
+        aws-token-access == "ade129274";
 
 }
